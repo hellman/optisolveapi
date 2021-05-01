@@ -35,6 +35,18 @@ class MILP(SolverBase):
             **opts
         )
 
+    @classmethod
+    def feasibility(cls, *args, solver="sage/glpk", **opts):
+        if not solver:
+            solver = "sage/glpk"
+        log.info(f"MILP feasibility with solver '{solver}'")
+        assert cls is MILP
+        return cls.BY_SOLVER[solver.lower()](
+            *args,
+            maximization=None, solver=solver,
+            **opts
+        )
+
     def var_binary(self, name):
         return self.var_int(name, lb=0, ub=1)
 
