@@ -1,4 +1,4 @@
-from .base import MILP
+from .base import MILP, MILPX
 
 from .gurobi import has_gurobi
 from .scip import has_scip

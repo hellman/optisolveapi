@@ -2,8 +2,12 @@ from distutils.core import setup
 
 setup(
     name='optisolveapi',
-    version='0.1.0',
-    packages=["optisolveapi"],
+    version='0.2.0',
+    packages=[
+        "optisolveapi",
+        # "optisolveapi.sat",
+        "optisolveapi.milp",
+    ],
 
     url=None,
     license="MIT",
@@ -19,5 +23,6 @@ setup(
     python_requires='>=3.5,<4.0',
     install_requires=[
         'python-sat[pblib,aiger]',
+        #'swiglpk',
     ],
 )
