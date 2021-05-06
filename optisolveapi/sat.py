@@ -13,6 +13,7 @@ Available ( https://pysathq.github.io/docs/html/api/solvers.html#list-of-classes
     Minisat22 : MiniSat 2.2 SAT solver
     MinisatGH : MiniSat SAT solver (version from github)
 '''
+from itertools import product
 from random import shuffle
 
 try:
@@ -22,6 +23,9 @@ except ImportError:
     has_pysat = False
 
 from .base import SolverBase
+
+
+_shuffle = shuffle
 
 
 class CNF(SolverBase):
@@ -283,9 +287,38 @@ class PySAT(CNF):
         solver = solver[len("pysat/"):]
         self._solver = Solver(name=solver)
 
+    def model_to_sol(self, model):
+        res = {(i+1): int(v > 0) for i, v in enumerate(model)}
+        for i in range(len(model), self._var_cnt):
+            res[i+1] = 0
+        return res
+
+    def model_to_sols(self, model):
+        res = {(i+1): int(v > 0) for i, v in enumerate(model)}
+        if self._var_cnt > len(res):
+            for vals in product(range(2), repeat=self._var_cnt - len(model)):
+                for i, v in zip(range(len(model), self._var_cnt), vals):
+                    res[i+1] = v
+                yield res.copy()
+        else:
+            yield res
+
     def solve(self, assumptions=()):
         sol = self._solver.solve(assumptions=assumptions)
         if sol is None or sol is False:
             return False
         model = self._solver.get_model()
-        return {(i+1): int(v > 0) for i, v in enumerate(model)}
+        return self.model_to_sol(model)
+
+    def solve_all(self, assumptions=()):
+        sol = self._solver.solve(assumptions=assumptions)
+        if sol is None or sol is False:
+            return
+        for model in self._solver.enum_models():
+            yield from self.model_to_sols(model)
+
+    def sol_eval(self, sol, vec):
+        return tuple(sol[abs(v)] ^ (1 if v < 0 else 0) for v in vec)
+
+    def __del__(self):
+        self._solver.delete()
