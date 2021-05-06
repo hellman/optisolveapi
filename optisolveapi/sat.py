@@ -59,6 +59,14 @@ class CNF(SolverBase):
         # b=0 => ab=0
         self.add_clause([b, -ab])
 
+    def constraint_or(self, a, b, ab):
+        # a=0 b=0 => ab=0
+        self.add_clause([a, b, -ab])
+        # a=1 => ab=1
+        self.add_clause([-a, ab])
+        # b=1 => ab=1
+        self.add_clause([-b, ab])
+
     def SeqInc(self, vec):
         return [self.ONE] + list(vec)
 
