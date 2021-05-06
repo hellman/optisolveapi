@@ -143,6 +143,50 @@ class CNF(SolverBase):
             self.add_clause(vec[c-1])
             self.add_clause(-vec[c])
 
+    def Cardinality(self, vec, lim=None, shuffle=False):
+        """
+        [Sinz2005]-like cardinality.
+        """
+        if lim is None:
+            lim = len(vec)
+        else:
+            lim = min(lim, len(vec))
+
+        assert vec
+        if len(vec) == 1:
+            return list(vec)
+
+        if shuffle:
+            vec = list(vec)
+            _shuffle(vec)
+
+        sub = self.Cardinality(vec[:-1], lim=lim, shuffle=False)
+        res = [self.var() for _ in range(lim)]
+        var = vec[-1]
+
+        # res[i] = card >= i+1
+        # res[0] = sub[0] | var
+        self.constraint_or(sub[0], var, res[0])
+        for i in range(1, lim):
+            # res[i] = sub[i] | (sub[i-1] & var)
+            if len(sub) >= i + 1:
+                x0, x1, x2, x3 = sub[i], sub[i-1], var, res[i]
+
+                # Sinz claims that if we encode Cardinality <= k
+                # then clauses with -x3 can be dropped.
+                # Indeed, this only would allow a bad assignment,
+                # but a good one would still exist if and only if card <= k.
+                # However, this seems to contradict with his claim
+                # that LT_SEQ is decided by unit propagation.
+                self.add_clause([x1, -x3])  # full is [x0, x1, -x3] but unarity gives x1 <= x0
+                self.add_clause([x0, x2, -x3])
+                self.add_clause([-x1, -x2, x3])
+                self.add_clause([-x0, x3])
+            else:
+                assert i == lim - 1
+                self.constraint_and(sub[i-1], var, res[i])
+        return res
+
     # def SeqFloor(src, c):
     #     n = len(src)
     #     m = n // c
