@@ -23,7 +23,7 @@ except ImportError:
     has_pysat = False
 
 from .base import SolverBase
-
+from .vector import Vector
 
 _shuffle = shuffle
 
@@ -48,6 +48,9 @@ class CNF(SolverBase):
         self._var_cnt += 1
         return self._var_cnt
 
+    def vars(self, n):
+        return Vector([self.var() for _ in range(n)])
+
     def add_clause(self, c):
         self._solver.add_clause(c)
 
@@ -71,81 +74,81 @@ class CNF(SolverBase):
         # b=1 => ab=1
         self.add_clause([-b, ab])
 
-    def SeqInc(self, vec):
-        return [self.ONE] + list(vec)
+    # def SeqInc(self, vec):
+    #     return [self.ONE] + list(vec)
 
-    def SeqAddConst(self, vec, c):
-        return [self.ONE] * c + list(vec)
+    # def SeqAddConst(self, vec, c):
+    #     return [self.ONE] * c + list(vec)
 
-    def SeqAdd(self, vec1, vec2):
-        n1 = len(vec1)
-        n2 = len(vec2)
-        vec3 = [self.var() for i in range(n1 + n2)]
-        ands = {}
+    # def SeqAdd(self, vec1, vec2):
+    #     n1 = len(vec1)
+    #     n2 = len(vec2)
+    #     vec3 = [self.var() for i in range(n1 + n2)]
+    #     ands = {}
 
-        # self.constraint_unary(vec1)  # optional
-        # self.constraint_unary(vec2)  # optional
-        self.constraint_unary(vec3)
+    #     # self.constraint_unary(vec1)  # optional
+    #     # self.constraint_unary(vec2)  # optional
+    #     self.constraint_unary(vec3)
 
-        for i in range(n1):
-            ands[i, -1] = vec1[i]
-            for j in range(n2):
-                ands[i, j] = self.var()
-                self.constraint_and(vec1[i], vec2[j], ands[i, j])
-                ands[-1, j] = vec2[j]
+    #     for i in range(n1):
+    #         ands[i, -1] = vec1[i]
+    #         for j in range(n2):
+    #             ands[i, j] = self.var()
+    #             self.constraint_and(vec1[i], vec2[j], ands[i, j])
+    #             ands[-1, j] = vec2[j]
 
-        for isum in range(1, n1+n2+1):
-            clause0 = [-vec3[isum-1]]
-            for i in range(min(isum + 1, n1 + 1)):
-                vi = vec1[i-1] if i else 0
-                j = isum - i
-                if j > n2:
-                    continue
-                vj = vec2[j-1] if j else 0
+    #     for isum in range(1, n1+n2+1):
+    #         clause0 = [-vec3[isum-1]]
+    #         for i in range(min(isum + 1, n1 + 1)):
+    #             vi = vec1[i-1] if i else 0
+    #             j = isum - i
+    #             if j > n2:
+    #                 continue
+    #             vj = vec2[j-1] if j else 0
 
-                # vec1[i] = 1, vec2[j] = 1 => vec3[i][isum] = 1
-                clause = [vec3[isum-1], -vi, -vj]
+    #             # vec1[i] = 1, vec2[j] = 1 => vec3[i][isum] = 1
+    #             clause = [vec3[isum-1], -vi, -vj]
 
-                clause = [c for c in clause if c]
-                self.add_clause(clause)
+    #             clause = [c for c in clause if c]
+    #             self.add_clause(clause)
 
-                clause0.append(ands[i-1, j-1])
+    #             clause0.append(ands[i-1, j-1])
 
-            # FORALL i, j vec1[i] & vec2[j] = 0 => vec3[i][isum] = 0
-            clause0 = [c for c in clause0 if c]
-            self.add_clause(clause0)
-        return vec3
+    #         # FORALL i, j vec1[i] & vec2[j] = 0 => vec3[i][isum] = 0
+    #         clause0 = [c for c in clause0 if c]
+    #         self.add_clause(clause0)
+    #     return vec3
 
-    def SeqAddMany(self, *vecs):
-        lst = list(vecs)
-        while len(lst) >= 2:
-            lst2 = []
-            shuffle(lst)
-            while len(lst) >= 2:
-                lst2.append(self.SeqAdd(lst.pop(), lst.pop()))
-            if lst:
-                lst2.append(lst.pop())
-            lst = lst2
-        return lst[0]
+    # def SeqAddMany(self, *vecs):
+    #     lst = list(vecs)
+    #     while len(lst) >= 2:
+    #         lst2 = []
+    #         shuffle(lst)
+    #         while len(lst) >= 2:
+    #             lst2.append(self.SeqAdd(lst.pop(), lst.pop()))
+    #         if lst:
+    #             lst2.append(lst.pop())
+    #         lst = lst2
+    #     return lst[0]
 
-    def SeqEq(self, vec1, vec2):
-        if len(vec1) < len(vec2):
-            self.add_clause([-vec2[len(vec1)]])
-        elif len(vec2) < len(vec1):
-            self.add_clause([-vec1[len(vec2)]])
-        for a, b in zip(vec1, vec2):
-            self.add_clause([a, -b])
-            self.add_clause([-a, b])
+    # def SeqEq(self, vec1, vec2):
+    #     if len(vec1) < len(vec2):
+    #         self.add_clause([-vec2[len(vec1)]])
+    #     elif len(vec2) < len(vec1):
+    #         self.add_clause([-vec1[len(vec2)]])
+    #     for a, b in zip(vec1, vec2):
+    #         self.add_clause([a, -b])
+    #         self.add_clause([-a, b])
 
-    def SeqEqConst(self, vec, c):
-        assert 0 <= c <= len(vec)
-        if c == 0:
-            self.add_clause([-vec[0]])
-        elif c == len(vec):
-            self.add_clause([vec[-1]])
-        else:
-            self.add_clause(vec[c-1])
-            self.add_clause(-vec[c])
+    # def SeqEqConst(self, vec, c):
+    #     assert 0 <= c <= len(vec)
+    #     if c == 0:
+    #         self.add_clause([-vec[0]])
+    #     elif c == len(vec):
+    #         self.add_clause([vec[-1]])
+    #     else:
+    #         self.add_clause(vec[c-1])
+    #         self.add_clause(-vec[c])
 
     def Cardinality(self, vec, lim=None, shuffle=False):
         """
@@ -227,47 +230,87 @@ class CNF(SolverBase):
     #         S.add_clause([-vdst] + [vsrc for vsrc in sub])
     #     return dst
 
-    def SeqMultConst(self, src, c):
-        res = []
-        for v in src:
-            res += [v] * c
-        return res
+    # def SeqMultConst(self, src, c):
+    #     res = []
+    #     for v in src:
+    #         res += [v] * c
+    #     return res
 
-    def AlignPad(self, a, b):
-        n = min(len(a), len(b)) + 1
-        a = list(a) + [self.ZERO] * (n - len(a))
-        b = list(b) + [self.ZERO] * (n - len(b))
-        return a, b
+    # def AlignPad(self, a, b):
+    #     n = min(len(a), len(b)) + 1
+    #     a = list(a) + [self.ZERO] * (n - len(a))
+    #     b = list(b) + [self.ZERO] * (n - len(b))
+    #     return a, b
 
-    def SeqLess(self, a, b):
-        # 1 0
-        # 0 0
-        a, b = self.AlignPad(a, b)
-        n = len(a)
+    # def SeqLess(self, a, b):
+    #     # 1 0
+    #     # 0 0
+    #     a, b = self.AlignPad(a, b)
+    #     n = len(a)
 
-        # Bad (equal):
-        # 1 0
-        # 1 0
-        for i in range(n-1):
-            self.add_clause([-a[i], -b[i], a[i+1], b[i+1]])
+    #     # Bad (equal):
+    #     # 1 0
+    #     # 1 0
+    #     for i in range(n-1):
+    #         self.add_clause([-a[i], -b[i], a[i+1], b[i+1]])
 
-        # Bad (greater):
-        # 1
-        # 0
-        for i in range(n):
-            self.add_clause([-a[i], b[i]])
+    #     # Bad (greater):
+    #     # 1
+    #     # 0
+    #     for i in range(n):
+    #         self.add_clause([-a[i], b[i]])
 
-    def SeqLessEqual(self, a, b):
-        # 1 0
-        # 0 0
-        a, b = self.AlignPad(a, b)
-        n = len(a)
+    # def SeqLessEqual(self, a, b):
+    #     # 1 0
+    #     # 0 0
+    #     a, b = self.AlignPad(a, b)
+    #     n = len(a)
 
-        # Bad (greater):
-        # 1
-        # 0
-        for i in range(n):
-            self.add_clause([-a[i], b[i]])
+    #     # Bad (greater):
+    #     # 1
+    #     # 0
+    #     for i in range(n):
+    #         self.add_clause([-a[i], b[i]])
+
+    def constraint_remove_lower(self, x: list, mx: int):
+        clause = []
+        x = list(x)
+        while x:
+            xx = x.pop()
+            if mx & 1 == 0:
+                clause.append(xx)
+            mx >>= 1
+        assert not mx
+        self.add_clause(clause)
+
+    def constraint_remove_upper(self, x: list, mn: int):
+        clause = []
+        x = list(x)
+        while x:
+            xx = x.pop()
+            if mn & 1 == 1:
+                clause.append(-xx)
+            mn >>= 1
+        assert not mn
+        self.add_clause(clause)
+
+    def constraint_convex(self, xs, lb=None, ub=None):
+        if lb:
+            for mx in lb:
+                self.constraint_remove_lower(xs, mx)
+        if ub:
+            for mn in ub:
+                self.constraint_remove_upper(xs, mn)
+
+    def Convex(self, xs, m=None, lb=None, ub=None):
+        if m is None:
+            m = len(xs)
+        ys = self.vars(m)
+        self.constraint_convex(Vector(xs).concat(ys), lb=lb, ub=ub)
+        return ys
+
+    def make_assumption(self, xs, values):
+        return [x if bit else -x for x, bit in zip(xs, values)]
 
 
 @CNF.register("pysat/cadical")  # CaDiCaL SAT solver
@@ -316,6 +359,10 @@ class PySAT(CNF):
             return
         for model in self._solver.enum_models():
             yield from self.model_to_sols(model)
+        # pysat spoils the model after enum_models() ...
+        # clear up to ensure no surprises
+        self._solver.delete()
+        del self._solver
 
     def sol_eval(self, sol, vec):
         return tuple(sol[abs(v)] ^ (1 if v < 0 else 0) for v in vec)
