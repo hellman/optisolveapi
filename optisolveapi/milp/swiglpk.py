@@ -101,6 +101,8 @@ class SWIGLPK(MILPX):
 
     def add_constraint(self, coefs: dict, lb=None, ub=None) -> int:
         assert lb is not None or ub is not None
+        assert lb is None or isinstance(lb, (int, float))
+        assert ub is None or isinstance(ub, (int, float))
 
         cid = self._constraint_id
         self._constraint_id += 1
@@ -111,6 +113,7 @@ class SWIGLPK(MILPX):
 
         glp_add_rows(self.model, 1)
         assert glp_get_num_rows(self.model) == len(self.constraints)
+
         glp_set_row_bnds(self.model, rowid, *self._bounds(lb, ub))
 
         inds = intArray(len(coefs) + 1)
@@ -130,13 +133,9 @@ class SWIGLPK(MILPX):
         # )
 
         glp_set_mat_row(self.model, rowid, len(coefs), inds, vals)
-        print("ADD_CONS", coefs, lb, ub, "-> cid", cid)
         return cid
 
     def remove_constraint(self, del_cid: int):
-        print("DEL_CONS", del_cid)
-        print(self.constraints)
-        print(self.rowid2cid)
         assert isinstance(del_cid, int)
         max_rowid = len(self.constraints)
 
@@ -203,6 +202,7 @@ class SWIGLPK(MILPX):
 
     def optimize(self, solution_limit=1, log=None, only_best=True):
         self.err = None
+        self.solutions = None
 
         if log:
             glp_term_out(GLP_ON)
