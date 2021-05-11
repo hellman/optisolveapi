@@ -31,7 +31,8 @@ _shuffle = shuffle
 class CNF(SolverBase):
     def __init__(self, solver="pysat/cadical"):
         self.init_solver(solver)
-        self._var_cnt = 0
+        self.n_vars = 0
+        self.n_clauses = 0
 
         self.ZERO = self.var()
         self.ONE = self.var()
@@ -45,13 +46,14 @@ class CNF(SolverBase):
         raise NotImplementedError()
 
     def var(self):
-        self._var_cnt += 1
-        return self._var_cnt
+        self.n_vars += 1
+        return self.n_vars
 
     def vars(self, n):
         return Vector([self.var() for _ in range(n)])
 
     def add_clause(self, c):
+        self.n_clauses += 1
         self._solver.add_clause(c)
 
     def constraint_unary(self, vec):
@@ -332,15 +334,15 @@ class PySAT(CNF):
 
     def model_to_sol(self, model):
         res = {(i+1): int(v > 0) for i, v in enumerate(model)}
-        for i in range(len(model), self._var_cnt):
+        for i in range(len(model), self.n_vars):
             res[i+1] = 0
         return res
 
     def model_to_sols(self, model):
         res = {(i+1): int(v > 0) for i, v in enumerate(model)}
-        if self._var_cnt > len(res):
-            for vals in product(range(2), repeat=self._var_cnt - len(model)):
-                for i, v in zip(range(len(model), self._var_cnt), vals):
+        if self.n_vars > len(res):
+            for vals in product(range(2), repeat=self.n_vars - len(model)):
+                for i, v in zip(range(len(model), self.n_vars), vals):
                     res[i+1] = v
                 yield res.copy()
         else:
