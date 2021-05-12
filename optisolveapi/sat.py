@@ -29,6 +29,8 @@ _shuffle = shuffle
 
 
 class CNF(SolverBase):
+    BY_SOLVER = {}
+
     def __init__(self, solver="pysat/cadical"):
         self.init_solver(solver)
         self.n_vars = 0

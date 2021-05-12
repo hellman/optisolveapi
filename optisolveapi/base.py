@@ -1,5 +1,5 @@
 class SolverBase:
-    BY_SOLVER = {}
+    BY_SOLVER = NotImplemented  # to be defined in the collection class
 
     @classmethod
     def register(cls, name):
