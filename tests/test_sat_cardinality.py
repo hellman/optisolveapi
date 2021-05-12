@@ -2,12 +2,20 @@ from optisolveapi.sat import CNF
 
 
 def test_cardinality():
+    C = CNF.new(solver="pysat/cadical")
+    xs = [C.var() for _ in range(10)]
+    card = C.Cardinality(xs)
+    assert len(card) == 12
+    assert card[0] is C.ONE
+    assert card[-1] is C.ZERO
+
     for n in range(1, 10):
         for k in range(1, n + 5):
             print(n, k)
             C = CNF.new(solver="pysat/cadical")
             xs = [C.var() for _ in range(n)]
             card = C.Cardinality(xs, lim=k)
+            assert len(card) == k + 1
             nsol = 0
             for sol in C.solve_all():
                 nsol += 1
@@ -15,7 +23,7 @@ def test_cardinality():
                 vxs = C.sol_eval(sol, xs)
                 vcard = C.sol_eval(sol, card)
                 for i, vc in enumerate(vcard):
-                    assert vc == (sum(vxs) >= i + 1)
+                    assert vc == (sum(vxs) >= i)
             assert nsol == 2**n, nsol
 
 
@@ -45,3 +53,5 @@ def test_constraint_or():
 
 if __name__ == '__main__':
     test_cardinality()
+    test_constraint_and()
+    test_constraint_or()
