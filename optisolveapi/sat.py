@@ -58,6 +58,10 @@ class CNF(SolverBase):
         self.n_clauses += 1
         self._solver.add_clause(c)
 
+    def add_clauses(self, cs):
+        self.n_clauses += len(cs)
+        self._solver.append_formula(cs)
+
     def constraint_unary(self, vec):
         for a, b in zip(vec, vec[1:]):
             self.add_clause([a, -b])
