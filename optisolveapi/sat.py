@@ -377,3 +377,28 @@ class PySAT(CNF):
 
     def __del__(self):
         self._solver.delete()
+
+@CNF.register("pysat/formula")
+class Formula(CNF):
+    def init_solver(self, solver):
+        assert has_pysat
+        assert solver.startswith("pysat/")
+        solver = solver[len("pysat/"):]
+        from pysat.formula import CNF
+        self._solver = CNF()
+
+    def add_clause(self, c):
+        self.n_clauses += 1
+        self._solver.append(c)
+
+    def add_clauses(self, cs):
+        self.n_clauses += len(cs)
+        self._solver.extend(cs)
+
+    def write_dimacs(self, filename, assumptions=()):
+        cnf = self._solver
+        if assumptions:
+            cnf = self._solver.copy()
+            for v in assumptions:
+                cnf.append([v])
+        cnf.to_file(filename)
