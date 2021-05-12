@@ -4,7 +4,7 @@ from optisolveapi.sat import CNF
 def test_cardinality():
     C = CNF.new(solver="pysat/cadical")
     xs = [C.var() for _ in range(10)]
-    card = C.Cardinality(xs)
+    card = C.Card(xs)
     assert len(card) == 12
     assert card[0] is C.ONE
     assert card[-1] is C.ZERO
@@ -14,7 +14,7 @@ def test_cardinality():
             print(n, k)
             C = CNF.new(solver="pysat/cadical")
             xs = [C.var() for _ in range(n)]
-            card = C.Cardinality(xs, lim=k)
+            card = C.Card(xs, lim=k)
             assert len(card) == k + 1
             nsol = 0
             for sol in C.solve_all():
