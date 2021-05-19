@@ -7,7 +7,7 @@ from .constraints import Constraints
 class CNF(SolverBase, Constraints):
     BY_SOLVER = {}
 
-    def __init__(self, solver):
+    def __init__(self, solver=None):
         self.init_solver(solver)
         self.n_vars = 0
         self.n_clauses = 0
@@ -42,3 +42,17 @@ class CNF(SolverBase, Constraints):
 
     def sol_eval(self, sol, vec):
         return tuple(sol[abs(v)] ^ (1 if v < 0 else 0) for v in vec if v)
+
+    def apply(self, cnf, inp):
+        assert cnf.n_vars == 1 + len(inp)
+        assert cnf.clauses[0] == [-cnf.ZERO] == [-1]
+        mapping = {}
+        # 0 is skipped, 1 is ZERO
+        # starting at 2
+        for i, v in enumerate(inp):
+            i += 2
+            mapping[i] = v
+            mapping[-i] = -v
+
+        for c in cnf.clauses[1:]:
+            self.add_clause([mapping[i] for i in c])

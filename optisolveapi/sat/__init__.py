@@ -1,5 +1,5 @@
 from .base import CNF
 from .simple import Formula, Writer
-from . import pysat
+from .pysat import PySAT
 from .ext import ExtSolver
 from .funcs import *

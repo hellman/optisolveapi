@@ -6,8 +6,7 @@ from .base import CNF
 
 @CNF.register("formula")
 class Formula(CNF):
-    def init_solver(self, solver):
-        assert solver == "formula"
+    def init_solver(self, solver=None):
         self.clauses = []
 
     def add_clause(self, c):
@@ -28,12 +27,6 @@ class Formula(CNF):
             if extra_clauses:
                 cnf.extend(extra_clauses)
         cnf.to_file(filename)
-
-    def apply(self, inp, cnf):
-        assert self.nvars == 1 + len(inp)
-        assert self.clauses[0] == [-self.ZERO]
-        for c in self.clauses[1:]:
-            cnf.add_clause([inp[i-2] for i in c])
 
 
 @CNF.register("writer")
