@@ -1,66 +1,12 @@
-# https://github.com/pysathq/pysat
-# pip install python-sat[pblib,aiger]
-'''
-Available ( https://pysathq.github.io/docs/html/api/solvers.html#list-of-classes ):
-    Cadical : CaDiCaL SAT solver
-    Glucose3 : Glucose 3 SAT solver
-    Glucose4 : Glucose 4.1 SAT solver
-    Lingeling : Lingeling SAT solver
-    MapleChrono : MapleLCMDistChronoBT SAT solver
-    MapleCM : MapleCM SAT solver
-    Maplesat : MapleCOMSPS_LRB SAT solver
-    Minicard : Minicard SAT solver
-    Minisat22 : MiniSat 2.2 SAT solver
-    MinisatGH : MiniSat SAT solver (version from github)
-'''
-from itertools import product
 from random import shuffle
 
-try:
-    from pysat.solvers import Solver
-    has_pysat = True
-except ImportError:
-    has_pysat = False
-
-from .base import SolverBase
-from .vector import Vector
+from optisolveapi.vector import Vector
 
 _shuffle = shuffle
 
 
-class CNF(SolverBase):
-    BY_SOLVER = {}
-
-    def __init__(self, solver="pysat/cadical"):
-        self.init_solver(solver)
-        self.n_vars = 0
-        self.n_clauses = 0
-
-        self.ZERO = self.var()
-        self.ONE = self.var()
-        self.add_clause([-self.ZERO])
-        self.add_clause([self.ONE])
-
-    def init_solver(self, solver):
-        raise NotImplementedError()
-
-    def solve(self, assumptions=()):
-        raise NotImplementedError()
-
-    def var(self):
-        self.n_vars += 1
-        return self.n_vars
-
-    def vars(self, n):
-        return Vector([self.var() for _ in range(n)])
-
-    def add_clause(self, c):
-        self.n_clauses += 1
-        self._solver.add_clause(c)
-
-    def add_clauses(self, cs):
-        self.n_clauses += len(cs)
-        self._solver.append_formula(cs)
+class Constraints:
+    """Mix-in for CNF"""
 
     def constraint_unary(self, vec):
         for a, b in zip(vec, vec[1:]):
@@ -158,40 +104,40 @@ class CNF(SolverBase):
     #         self.add_clause(vec[c-1])
     #         self.add_clause(-vec[c])
 
-    def Card(self, vec, lim=None, shuffle=False):
+    def Card(self, vec, limit=None, shuffle=False):
         """
         [Sinz2005]-like cardinality.
         Returns:
         [>=0, >=1, >=2, ..., >= len(vec)+1]
         =
         [TRUE, ..., ..., ..., FALSE]
-        if lim is less, then the last one may not be added
-        [>=0, >=1, >=2, ..., >= lim]
+        if limit is less, then the last one may not be added
+        [>=0, >=1, >=2, ..., >= limit]
 
-        lim = 2
+        limit = 2
         [0, 1, 2] l=3
-        lim = 3
+        limit = 3
         [0, 1, 2, Z] l=4
         """
-        if lim is None:
+        if limit is None:
             nvars = len(vec)
-            lim = len(vec) + 1
+            limit = len(vec) + 1
         else:
-            nvars = min(lim, len(vec))
+            nvars = min(limit, len(vec))
 
         assert vec
         if len(vec) == 1:
             res = [self.ONE, vec[0]]
-            res += [self.ZERO] * (lim + 1 - len(res))
+            res += [self.ZERO] * (limit + 1 - len(res))
             return res
 
         if shuffle:
             vec = list(vec)
             _shuffle(vec)
 
-        sub = self.Card(vec[:-1], lim=lim, shuffle=False)
+        sub = self.Card(vec[:-1], limit=limit, shuffle=False)
         res = [self.ONE] + [self.var() for _ in range(nvars)]
-        res += [self.ZERO] * (lim + 1 - len(res))
+        res += [self.ZERO] * (limit + 1 - len(res))
         var = vec[-1]
 
         # res[i] = card >= i
@@ -215,29 +161,37 @@ class CNF(SolverBase):
                 self.add_clause([-x1, -x2, x3])
                 self.add_clause([-x0, x3])
             else:
-                assert i in (len(vec), lim)
+                assert i in (len(vec), limit)
                 assert sub[i] == self.ZERO
                 self.constraint_and(sub[i-1], var, res[i])
         return res
 
+    def CardNeg(self, card):
+        assert card[0] == self.ONE
+        return card[:1] + [-v for v in card[1:][::-1]]
+
     def CardScale(self, card, k):
-        assert card[0] is self.ZERO
+        assert card[0] == self.ONE
         n = len(card) - 1
         return card[:1] + [card[1+i//k] for i in range(n * k)]
 
     def CardLEk(self, card, k):
         n = len(card) - 1
-        assert card[0] is self.ZERO
+        assert card[0] == self.ONE
         assert 0 <= k < n
-        for i in range(k + 1, n):
-            self.add_clause(-card[i])
+        for i in range(k + 1, len(card)):
+            if card[i] is self.ZERO:
+                continue
+            self.add_clause([-card[i]])
 
     def CardGEk(self, card, k):
         n = len(card) - 1
-        assert card[0] is self.ZERO
+        assert card[0] == self.ONE
         assert 0 <= k <= n
-        for i in range(1, k + 1):
-            self.add_clause(card[i])
+        for i in range(k + 1):
+            if card[i] is self.ONE:
+                continue
+            self.add_clause([card[i]])
 
     def CardAlignPad(self, a, b):
         n = min(len(a), len(b)) + 1
@@ -354,90 +308,35 @@ class CNF(SolverBase):
         self.constraint_convex(Vector(xs).concat(ys), lb=lb, ub=ub)
         return ys
 
-    def make_assumption(self, xs, values):
-        return [x if bit else -x for x, bit in zip(xs, values)]
+    def constraint_matching(S, u, v, mat):
+        assert len(mat) == len(v)
+        assert len(mat[0]) == len(u)
+        e = [
+            [None] * len(u) for _ in range(len(v))
+        ]
 
+        for y in range(len(v)):
+            for x in range(len(u)):
+                if mat[y][x]:
+                    e[y][x] = S.var()
+                    # e_yx => v_y
+                    # e_yx => u_x
+                    S.add_clause([-e[y][x], v[y]])
+                    S.add_clause([-e[y][x], u[x]])
+        # copy
+        for x in range(len(u)):
+            col = [e[y][x] for y in range(len(v)) if mat[y][x]]
+            card = S.Card(col, limit=2)
+            S.CardLEk(card, 1)
+            # enforce outgoing
+            # u[x] => card >= 1
+            S.add_clause([-u[x], card[1]])
 
-@CNF.register("pysat/cadical")  # CaDiCaL SAT solver
-@CNF.register("pysat/glucose3")  # Glucose 3 SAT solver
-@CNF.register("pysat/glucose4")  # Glucose 4.1 SAT solver
-@CNF.register("pysat/lingeling")  # Lingeling SAT solver
-@CNF.register("pysat/maplechrono")  # MapleLCMDistChronoBT SAT solver
-@CNF.register("pysat/maplecm")  # MapleCM SAT solver
-@CNF.register("pysat/maplesat")  # MapleCOMSPS_LRB SAT solver
-@CNF.register("pysat/minicard")  # Minicard SAT solver
-@CNF.register("pysat/minisat22")  # MiniSat 2.2 SAT solver
-@CNF.register("pysat/minisatgh")  # MiniSat SAT solver (version from github)
-class PySAT(CNF):
-    def init_solver(self, solver):
-        assert has_pysat
-        assert solver.startswith("pysat/")
-        solver = solver[len("pysat/"):]
-        self._solver = Solver(name=solver)
-
-    def model_to_sol(self, model):
-        res = {(i+1): int(v > 0) for i, v in enumerate(model)}
-        for i in range(len(model), self.n_vars):
-            res[i+1] = 0
-        return res
-
-    def model_to_sols(self, model):
-        res = {(i+1): int(v > 0) for i, v in enumerate(model)}
-        if self.n_vars > len(res):
-            for vals in product(range(2), repeat=self.n_vars - len(model)):
-                for i, v in zip(range(len(model), self.n_vars), vals):
-                    res[i+1] = v
-                yield res.copy()
-        else:
-            yield res
-
-    def solve(self, assumptions=()):
-        sol = self._solver.solve(assumptions=assumptions)
-        if sol is None or sol is False:
-            return False
-        model = self._solver.get_model()
-        return self.model_to_sol(model)
-
-    def solve_all(self, assumptions=()):
-        sol = self._solver.solve(assumptions=assumptions)
-        if sol is None or sol is False:
-            return
-        for model in self._solver.enum_models():
-            yield from self.model_to_sols(model)
-        # pysat spoils the model after enum_models() ...
-        # clear up to ensure no surprises
-        self._solver.delete()
-        del self._solver
-
-    def sol_eval(self, sol, vec):
-        return tuple(sol[abs(v)] ^ (1 if v < 0 else 0) for v in vec)
-
-    def __del__(self):
-        if hasattr(self, "_solver"):
-            self._solver.delete()
-
-
-@CNF.register("pysat/formula")
-class Formula(CNF):
-    def init_solver(self, solver):
-        assert has_pysat
-        assert solver.startswith("pysat/")
-        solver = solver[len("pysat/"):]
-        from pysat.formula import CNF
-        self._solver = CNF()
-
-    def add_clause(self, c):
-        self.n_clauses += 1
-        self._solver.append(c)
-
-    def add_clauses(self, cs):
-        self.n_clauses += len(cs)
-        self._solver.extend(cs)
-
-    def write_dimacs(self, filename, assumptions=()):
-        cnf = self._solver
-        if assumptions:
-            cnf = self._solver.copy()
-            for v in assumptions:
-                cnf.append([v])
-        cnf.to_file(filename)
+        # xor
+        for y in range(len(v)):
+            row = [e[y][x] for x in range(len(u)) if mat[y][x]]
+            card = S.Card(row, limit=2)
+            S.CardLEk(card, 1)
+            # enforce incoming
+            # v[y] => card >= 1
+            S.add_clause([-v[y], card[1]])
