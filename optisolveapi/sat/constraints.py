@@ -308,7 +308,7 @@ class Constraints:
         self.constraint_convex(Vector(xs).concat(ys), lb=lb, ub=ub)
         return ys
 
-    def constraint_matching(S, u, v, mat):
+    def constraint_matching(S, u, v, mat, UB=True):
         assert len(mat) == len(v)
         assert len(mat[0]) == len(u)
         e = [
@@ -337,6 +337,7 @@ class Constraints:
             row = [e[y][x] for x in range(len(u)) if mat[y][x]]
             card = S.Card(row, limit=2)
             S.CardLEk(card, 1)
-            # enforce incoming
+            # enforce incoming (UB)
             # v[y] => card >= 1
-            S.add_clause([-v[y], card[1]])
+            if UB:
+                S.add_clause([-v[y], card[1]])
