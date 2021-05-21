@@ -18,22 +18,22 @@ class Formula(CNF):
         self.clauses.extend(cs)
 
     def write_dimacs(self, filename, assumptions=(), extra_clauses=()):
-        cnf = self._solver
+        clauses = self.clauses
         if assumptions or extra_clauses:
-            cnf = self._solver.copy()
+            clauses = self.clauses.copy()
             if assumptions:
                 for v in assumptions:
-                    cnf.append([v])
+                    clauses.append([v])
             if extra_clauses:
-                cnf.extend(extra_clauses)
-        cnf.to_file(filename)
+                clauses.extend(extra_clauses)
+        # clauses.to_file(filename)
+        raise NotImplementedError()
 
 
 @CNF.register("writer")
 class Writer(CNF):
     def init_solver(self, solver):
         self._file = BytesIO()
-        # self._file.write(b"p cnf 0 0\n")
         self._solver = None
 
     def add_clause(self, c):
