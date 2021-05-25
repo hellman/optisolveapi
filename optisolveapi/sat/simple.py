@@ -1,4 +1,5 @@
 from io import BytesIO
+from copy import deepcopy
 from tempfile import NamedTemporaryFile
 
 from .base import CNF
@@ -73,3 +74,6 @@ class Writer(CNF):
                 extra_clauses=extra_clauses,
             )
             return self._solver.solve_file(filename=f.name, log=log)
+
+    def copy(self):
+        return deepcopy(self)
