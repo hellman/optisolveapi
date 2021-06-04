@@ -28,7 +28,7 @@ class Gurobi(MILP):
 
     def set_ub(self, var, ub=None):
         if ub is None:
-            var.setAttr("ub", float("-inf"))
+            var.setAttr("ub", float("inf"))
         else:
             var.setAttr("ub", ub)
 
@@ -95,7 +95,7 @@ class Gurobi(MILP):
                 self.model.setParam("SolutionNumber", i)
 
                 solobj = self.model.PoolObjVal
-                if solobj + self.EPS < obj and only_best:
+                if obj is not True and solobj + self.EPS < obj and only_best:
                     continue
 
                 vec = {v: self.trunc(v.Xn) for v in self.vars}
