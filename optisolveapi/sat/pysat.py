@@ -35,7 +35,8 @@ if has_pysat:
             for i in range(len(model), self.n_vars):
                 assert (i+1) not in res
                 res[i+1] = 0
-            self.log.debug(f"set {added} free vars to 0")
+            if added:
+                self.log.debug(f"set {added} free vars to 0")
             return res
 
         def model_to_sols(self, model):
