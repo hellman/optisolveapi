@@ -63,6 +63,13 @@ class MILP(SolverBase):
 
 
 class MILPX(SolverBase):
+    """
+    Less nice but more efficient syntax for constraints.
+
+    Example:
+        .add_constraint({x1: 2, x2: 3}, lb=3)
+        2*x1 + 3*x2 >= 3
+    """
     BY_SOLVER = {}
     EPS = 1e-9
     debug = 0
@@ -125,6 +132,7 @@ class MILPX(SolverBase):
         self.vars = {}
 
     VarInfo = namedtuple("VarInfo", ("name", "typ"))
+
     def _var(self, *args, **kwargs):
         return self.VarInfo(*args, **kwargs)
 
@@ -146,7 +154,7 @@ class MILPX(SolverBase):
     def var_binary(self, name):
         return self.var_int(name, lb=0, ub=1)
 
-    def add_constraint(self, coefs, ge=None, le=None):
+    def add_constraint(self, coefs, lb=None, ub=None):
         raise NotImplementedError
 
     def remove_constraint(self, cid):
@@ -160,18 +168,3 @@ class MILPX(SolverBase):
 
     def optimize(self, solution_limit=1, log=None, only_best=True):
         raise NotImplementedError
-    #     self.err = None
-    #     try:
-    #         obj = self.trunc(self.model.solve(log=log))
-    #     except MIPSolverException as err:
-    #         self.err = err
-    #         return
-    #     if solution_limit == 0:
-    #         return obj
-
-    #     # sagemath returns only 1 solution
-    #     vec = {v: self.trunc(self.model.get_values(v)) for v in self.vars}
-    #     self.solutions = vec,
-    #     return obj
-
-    #
