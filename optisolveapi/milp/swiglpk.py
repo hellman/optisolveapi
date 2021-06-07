@@ -104,6 +104,7 @@ class SWIGLPK(MILPX):
         assert 0
 
     def add_constraint(self, coefs: dict, lb=None, ub=None) -> int:
+        assert isinstance(coefs, dict)
         assert lb is not None or ub is not None
         assert lb is None or isinstance(lb, (int, float))
         assert ub is None or isinstance(ub, (int, float))
