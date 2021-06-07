@@ -217,30 +217,38 @@ class SWIGLPK(MILPX):
 
         status = None
 
+        # step 1: simplex
         parm = glp_smcp()
         glp_init_smcp(parm)
+        parm.presolve = GLP_ON
         ret = glp_simplex(self.model, parm)
-        if ret != 0:
+        if ret in (GLP_ENOPFS, GLP_ENODFS):
+            return False
+        elif ret != 0:
             raise RuntimeError(f"unknown GLPK error (simplex): {ret}")
 
+        status = glp_get_status(self.model)
+        if status == GLP_INFEAS or status == GLP_NOFEAS:
+            return False
+
         if self.has_ints:
+            # step 2: MIP
             parm = glp_iocp()
             glp_init_iocp(parm)
             parm.presolve = GLP_ON
             ret = glp_intopt(self.model, parm)
-            if ret == GLP_ENOPFS:
-                status = GLP_INFEAS
+            if ret in (GLP_ENOPFS, GLP_ENODFS):
+                return False
             elif ret != 0:
                 raise RuntimeError(f"unknown GLPK error (intopt): {ret}")
 
-        if status is None:
-            status = glp_get_status(self.model)
+        status = glp_get_status(self.model)
 
         if self.maximization is None:
-            if status == GLP_FEAS or status == GLP_OPT:
+            if status in (GLP_FEAS, GLP_OPT):
                 obj = True
-            elif status == GLP_INFEAS or status == GLP_NOFEAS:
-                obj = False
+            elif status in (GLP_INFEAS, GLP_NOFEAS):
+                return False
             else:
                 raise RuntimeError(f"unknown GLPK status: {status}")
         else:
