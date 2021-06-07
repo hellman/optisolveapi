@@ -61,7 +61,8 @@ class SWIGLPK(MILPX):
             glp_delete_prob(self.model)
 
     def _var(self, name, typ):
-        if typ != "R":
+        assert typ in "RCIB", typ
+        if typ not in ("C", "R"):
             self.has_ints = True
         assert glp_get_num_cols(self.model) == len(self.vars)
         varid = len(self.vars) + 1
