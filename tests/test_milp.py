@@ -1,7 +1,7 @@
 import time
 
 from optisolveapi.milp import (
-    MILP,
+    MILP, MILPX,
     has_scip, has_sage, has_gurobi, has_swiglpk,
 )
 
@@ -27,8 +27,8 @@ def test_milp():
             print("solver", solver, "elapsed", f"{time.time() - t0:.3f}")
         print()
 
-        if has_swiglpk:
-            check_milpx("swiglpk")
+        assert has_swiglpk
+        check_milpx("swiglpk")
 
 
 def check_solver(solver):
@@ -98,7 +98,7 @@ def check_solver(solver):
 def check_milpx(solver):
     print("SOLVER", solver)
     if 0:
-        milp = MILP.maximization(solver=solver)
+        milp = MILPX.maximization(solver=solver)
         x = milp.var_int("x", 3, 7)
         y = milp.var_int("y", 2, 4)
 
@@ -109,9 +109,26 @@ def check_milpx(solver):
         for sol in milp.solutions:
             assert sol[x] == 7
 
+    if 1:
+        print("Bug test")
+        # was bug
+        S = MILPX.feasibility(solver=solver)
+        x0 = S.var_real("x0", lb=None, ub=None)
+        x1 = S.var_real("x1", lb=None, ub=None)
+        x2 = S.var_real("x2", lb=None, ub=None)
+        c = S.var_real("c", lb=None, ub=None)
+
+        S.add_constraint({'x0': 0, 'x1': 0, 'c': -1}, lb=0, ub=None)
+        S.add_constraint({'x0': 0, 'x1': 1, 'c': -1}, lb=0, ub=None)
+        S.add_constraint({'x0': -1, 'x1': 0, 'c': -1}, lb=None, ub=-1)
+        S.add_constraint({'x0': 2, 'x1': 2, 'c': -1}, lb=None, ub=-1)
+
+        assert S.optimize() is False
+        print("Bug test ok")
+
     # ==================================
 
-    milp = MILP.maximization(solver=solver)
+    milp = MILPX.maximization(solver=solver)
     x = milp.var_int("x", 3, 7)
     y = milp.var_int("y", 2, 4)
     milp.set_objective({y: -3})
@@ -158,7 +175,7 @@ def check_milpx(solver):
         for sol in milp.solutions:
             assert sol[y] == 2
 
-    milp = MILP.feasibility(solver=solver)
+    milp = MILPX.feasibility(solver=solver)
     x = milp.var_int("x", 1, 5)
     y = milp.var_int("y", 5, 10)
     z = milp.var_int("z", -100, 20)
@@ -191,13 +208,13 @@ def check_milpx(solver):
 
         obj = milp.optimize(log=1)
         assert obj is False, obj
-        assert milp.solutions
+        assert not milp.solutions
 
         milp.remove_constraints(lo)
 
         obj = milp.optimize(log=1)
         assert obj is False, obj
-        assert milp.solutions
+        assert not milp.solutions
 
         milp.remove_constraint(bad)
 
@@ -213,6 +230,7 @@ def check_milpx(solver):
 
         if i < 90:
             milp.remove_constraints(top)
+
 
 # reopt is buggy..
 def disabled_test_scip_reopt():
