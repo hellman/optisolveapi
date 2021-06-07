@@ -1,4 +1,8 @@
+import logging
 from collections import namedtuple
+from .base import MILPX
+
+log = logging.getLogger(__name__)
 
 try:
     from swiglpk import (
@@ -32,13 +36,11 @@ try:
         glp_std_basis,
     )
     has_swiglpk = True
-except ImportError:
+except ImportError as err:
     has_swiglpk = False
+    log.warning(f"no swiglpk detected: {err}")
 
-from .base import MILP, MILPX
 
-
-@MILP.register("swiglpk")
 @MILPX.register("swiglpk")
 class SWIGLPK(MILPX):
     VarInfo = namedtuple("VarInfo", ("name", "typ", "id"))
@@ -55,7 +57,8 @@ class SWIGLPK(MILPX):
             glp_set_obj_dir(self.model, GLP_MIN)
 
     def __del__(self):
-        glp_delete_prob(self.model)
+        if has_swiglpk:
+            glp_delete_prob(self.model)
 
     def _var(self, name, typ):
         if typ != "R":
