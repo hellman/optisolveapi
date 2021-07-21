@@ -68,5 +68,5 @@ if has_pysat:
             del self._solver
 
         def __del__(self):
-            if hasattr(self, "_solver"):
+            if hasattr(self, "_solver") and self._solver:
                 self._solver.delete()
