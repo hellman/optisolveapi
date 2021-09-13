@@ -28,6 +28,12 @@ class Constraints:
         # b=1 => ab=1
         self.add_clause([-b, ab])
 
+    def constraint_eq(self, a, b, ab):
+        # a=1 => b=1
+        self.add_clause([-a, b])
+        # b=0 => a=1
+        self.add_clause([-b, a])
+
     # def SeqInc(self, vec):
     #     return [self.ONE] + list(vec)
 
