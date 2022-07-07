@@ -107,6 +107,10 @@ class SCIP(MILP):
             self.model.freeTransform()
         return obj
 
+    def write_lp(self, filename):
+        assert filename.endswith(".lp")
+        self.model.writeProblem(filename)
+
 
 class IdResolver:
     """Stub to allow dict-like solutions when var is not hashable..."""

@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 try:
     from swiglpk import (
         glp_create_prob,
+        glp_write_lp,
         glp_set_obj_dir,
         glp_add_rows,
         glp_add_cols,
@@ -268,3 +269,7 @@ class SWIGLPK(MILPX):
         }
         self.solutions = vec,
         return obj
+
+    def write_lp(self, filename):
+        if glp_write_lp(self.model, filename) != 0:
+            raise RuntimeError("can not write lp")
