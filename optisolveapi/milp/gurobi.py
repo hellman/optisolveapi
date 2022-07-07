@@ -7,6 +7,12 @@ except ImportError:
 
 from .base import MILP
 
+if has_gurobi:
+    import logging
+    # disable duplicate logging
+    # although this prevents from logging to .log...
+    logging.getLogger("gurobipy").setLevel(logging.WARNING)
+
 
 @MILP.register("gurobi")
 class Gurobi(MILP):
@@ -17,6 +23,7 @@ class Gurobi(MILP):
         self.model.setParam("OutputFlag", 0)
         # self.model.setParam("OutputFile", "")
         self.model.setParam("LogToConsole", 0)
+        self.model.setParam("LogFile", "/dev/null")
         self.maximization = maximization
         self.vars = []
 
@@ -65,10 +72,12 @@ class Gurobi(MILP):
 
     def optimize(self, solution_limit=1, log=None, only_best=True):
         if not log:
+            self.model.setParam("LogFile", "")
             self.model.setParam("LogToConsole", 0)
+            self.model.setParam("OutputFlag", 0)
         else:
-            self.model.setParam("LogToConsole", 1)
             self.model.setParam("OutputFlag", 1)
+            self.model.setParam("LogToConsole", 1)
 
         if solution_limit <= 1:
             self.model.setParam("PoolSearchMode", 0)
