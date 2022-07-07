@@ -5,7 +5,7 @@ setup(
     version='0.2.0',
     packages=[
         "optisolveapi",
-        # "optisolveapi.sat",
+        "optisolveapi.sat",
         "optisolveapi.milp",
     ],
 
