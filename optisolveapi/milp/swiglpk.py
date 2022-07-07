@@ -12,6 +12,8 @@ try:
         glp_add_rows,
         glp_add_cols,
         glp_set_col_name,
+        glp_set_col_kind,
+        GLP_CV, GLP_IV, GLP_BV,
         glp_get_num_rows,
         glp_get_num_cols,
         GLP_MIN, GLP_MAX,
@@ -69,6 +71,12 @@ class SWIGLPK(MILPX):
         varid = len(self.vars) + 1
         glp_add_cols(self.model, 1)
         glp_set_col_name(self.model, varid, name)
+        if typ in ("C", "R"):
+            glp_set_col_kind(self.model, varid, GLP_CV)
+        elif typ in ("I",):
+            glp_set_col_kind(self.model, varid, GLP_IV)
+        elif typ in ("B",):
+            glp_set_col_kind(self.model, varid, GLP_BV)
         return self.VarInfo(name=name, typ=typ, id=varid)
 
     def set_var_bounds(self, var, lb=None, ub=None):
@@ -271,5 +279,5 @@ class SWIGLPK(MILPX):
         return obj
 
     def write_lp(self, filename):
-        if glp_write_lp(self.model, filename) != 0:
+        if glp_write_lp(self.model, None, filename) != 0:
             raise RuntimeError("can not write lp")

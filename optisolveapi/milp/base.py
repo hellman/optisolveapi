@@ -152,7 +152,9 @@ class MILPX(SolverBase):
         return name
 
     def var_binary(self, name):
-        return self.var_int(name, lb=0, ub=1)
+        assert name not in self.vars
+        self.vars[name] = self._var(name=name, typ="B")
+        return name
 
     def add_constraint(self, coefs, lb=None, ub=None):
         raise NotImplementedError
