@@ -64,6 +64,7 @@ class ExtSolver(CNF):
         return False
 
 
+# TODO: should it be ext/kissat?
 @ExtSolver.register("kissat")
 class Kissat(ExtSolver):
     CMD = [

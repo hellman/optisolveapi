@@ -1,11 +1,15 @@
 from optisolveapi.vector import Vector
-from optisolveapi.base import SolverBase
+from optisolveapi.solver_base import SolverBase
 
 from .constraints import Constraints
 
 
 class CNF(SolverBase, Constraints):
     BY_SOLVER = {}
+    DEFAULT_PREFERENCE = (
+        "pysat/cadical",
+        "ext/kissat",
+    )
 
     def __init__(self, solver=None):
         self.init_solver(solver)
