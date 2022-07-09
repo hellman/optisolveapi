@@ -228,7 +228,7 @@ class SWIGLPK(MILPX):
     def optimize(self, solution_limit=1, log=None, only_best=True):
         self.err = None
         self.solutions = None
-        log = 1
+
         if log:
             glp_term_out(GLP_ON)
         else:
