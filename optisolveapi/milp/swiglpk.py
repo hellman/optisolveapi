@@ -145,7 +145,7 @@ class SWIGLPK(MILP):
         vals = doubleArray(len(coefs) + 1)
         # print(coefs)
         ptr = 1
-        for var, val in coefs.items():
+        for var, val in coefs:
             inds[ptr] = self.vars[var].id
             vals[ptr] = val
             ptr += 1
@@ -273,7 +273,8 @@ class SWIGLPK(MILP):
 
         if self.maximization is None:
             if status in (GLP_FEAS, GLP_OPT):
-                assert status == GLP_FEAS
+                # somehow GLP_OPT happens even without objective
+                # perhaps GLP_FEAS is only for LP (non-int)?
                 obj = True
             elif status in (GLP_INFEAS, GLP_NOFEAS):
                 return False
