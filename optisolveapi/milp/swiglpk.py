@@ -31,11 +31,17 @@ try:
         glp_term_out,
         GLP_ON, GLP_OFF,
         glp_intopt, glp_simplex,
+
         glp_get_obj_val,
         glp_get_col_prim,
+        glp_mip_obj_val,
+        glp_mip_col_val,
+
         glp_get_status,
         GLP_OPT, GLP_FEAS, GLP_NOFEAS, GLP_INFEAS,
-        GLP_ENOPFS, GLP_ENODFS,
+
+        GLP_ENOPFS,  # The LP problem instance has no primal feasible solution (only if the LP presolver is used)
+        GLP_ENODFS,  # The LP problem instance has no dual feasible solution (only if the LP presolver is used)
         glp_std_basis,
     )
     has_swiglpk = True
@@ -76,7 +82,12 @@ class SWIGLPK(MILPX):
         elif typ in ("I",):
             glp_set_col_kind(self.model, varid, GLP_IV)
         elif typ in ("B",):
+
             glp_set_col_kind(self.model, varid, GLP_BV)
+            # print("set col kind BINARY", GLP_CV, GLP_IV, GLP_BV)
+        else:
+            raise ValueError()
+        #print("var", name, "get col kind", glp_get_col_kind(self.model, varid), "ints", self.has_ints)
         return self.VarInfo(name=name, typ=typ, id=varid)
 
     def set_var_bounds(self, var, lb=None, ub=None):
@@ -217,7 +228,7 @@ class SWIGLPK(MILPX):
     def optimize(self, solution_limit=1, log=None, only_best=True):
         self.err = None
         self.solutions = None
-
+        log = 1
         if log:
             glp_term_out(GLP_ON)
         else:
@@ -252,10 +263,17 @@ class SWIGLPK(MILPX):
             elif ret != 0:
                 raise RuntimeError(f"unknown GLPK error (intopt): {ret}")
 
+            f_obj_val = glp_mip_obj_val
+            f_var_val = glp_mip_col_val
+        else:
+            f_obj_val = glp_get_obj_val
+            f_var_val = glp_get_col_prim
+
         status = glp_get_status(self.model)
 
         if self.maximization is None:
             if status in (GLP_FEAS, GLP_OPT):
+                assert status == GLP_FEAS
                 obj = True
             elif status in (GLP_INFEAS, GLP_NOFEAS):
                 return False
@@ -263,16 +281,15 @@ class SWIGLPK(MILPX):
                 raise RuntimeError(f"unknown GLPK status: {status}")
         else:
             if status == GLP_OPT:
-                obj = self.trunc(glp_get_obj_val(self.model))
+                obj = self.trunc(f_obj_val(self.model))
             else:
                 raise RuntimeError(f"unknown GLPK status: {status}")
 
         if solution_limit == 0:
             return obj
 
-        # sagemath returns only 1 solution
         vec = {
-            name: self.trunc(glp_get_col_prim(self.model, var.id))
+            name: self.trunc(f_var_val(self.model, var.id))
             for name, var in self.vars.items()
         }
         self.solutions = vec,
