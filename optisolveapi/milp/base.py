@@ -1,68 +1,12 @@
 import logging
 from collections import namedtuple
 
-from ..base import SolverBase
+from optisolveapi.solver_base import SolverBase
 
 log = logging.getLogger(__name__)
 
 
 class MILP(SolverBase):
-    BY_SOLVER = {}
-    EPS = 1e-9
-    debug = 0
-    err = None
-
-    @classmethod
-    def maximization(cls, *args, solver=None, **opts):
-        if not solver:
-            solver = "sage/glpk"
-        log.info(f"MILP maximization with solver '{solver}'")
-        assert cls is MILP
-        return cls.BY_SOLVER[solver.lower()](
-            *args,
-            maximization=True, solver=solver,
-            **opts
-        )
-
-    @classmethod
-    def minimization(cls, *args, solver="sage/glpk", **opts):
-        if not solver:
-            solver = "sage/glpk"
-        log.info(f"MILP minimization with solver '{solver}'")
-        assert cls is MILP
-        return cls.BY_SOLVER[solver.lower()](
-            *args,
-            maximization=False, solver=solver,
-            **opts
-        )
-
-    @classmethod
-    def feasibility(cls, *args, solver="sage/glpk", **opts):
-        if not solver:
-            solver = "sage/glpk"
-        log.info(f"MILP feasibility with solver '{solver}'")
-        assert cls is MILP
-        return cls.BY_SOLVER[solver.lower()](
-            *args,
-            maximization=None, solver=solver,
-            **opts
-        )
-
-    def var_binary(self, name):
-        return self.var_int(name, lb=0, ub=1)
-
-    def trunc(self, v):
-        r = round(v)
-        if abs(r - v) < self.EPS:
-            return int(r)
-        else:
-            return v
-
-    def write_lp(self, filename):
-        self.model.write_lp(filename)
-
-
-class MILPX(SolverBase):
     """
     Less nice but more efficient syntax for constraints.
 
@@ -71,6 +15,14 @@ class MILPX(SolverBase):
         2*x1 + 3*x2 >= 3
     """
     BY_SOLVER = {}
+
+    DEFAULT_PREFERENCE = (
+        "swiglpk",
+        "scip",
+        "gurobi",
+        "sage/glpk",
+    )
+
     EPS = 1e-9
     debug = 0
     err = None
@@ -80,7 +32,7 @@ class MILPX(SolverBase):
         if not solver:
             solver = "swiglpk"
         log.info(f"MILP maximization with solver '{solver}'")
-        assert cls is MILPX
+        assert cls is MILP
         return cls.BY_SOLVER[solver.lower()](
             *args,
             maximization=True, solver=solver,
@@ -92,7 +44,7 @@ class MILPX(SolverBase):
         if not solver:
             solver = "swiglpk"
         log.info(f"MILP minimization with solver '{solver}'")
-        assert cls is MILPX
+        assert cls is MILP
         return cls.BY_SOLVER[solver.lower()](
             *args,
             maximization=False, solver=solver,
@@ -104,7 +56,7 @@ class MILPX(SolverBase):
         if not solver:
             solver = "swiglpk"
         log.info(f"MILP feasibility with solver '{solver}'")
-        assert cls is MILPX
+        assert cls is MILP
         return cls.BY_SOLVER[solver.lower()](
             *args,
             maximization=None, solver=solver,
@@ -156,16 +108,42 @@ class MILPX(SolverBase):
         self.vars[name] = self._var(name=name, typ="B")
         return name
 
-    def add_constraint(self, coefs, lb=None, ub=None):
+    def add_constraint_kw(self, lb=None, ub=None, **coefs: dict[str, float]):
+        """
+        2*x1 -10*x2 >= 10
+        model.add_constraint_kw(x1=2, x2=-10, lb=10)
+        """
+        return self.add_constraint(coefs.items(), lb=lb, ub=ub)
+
+    def add_constraint_dict(self, coefs: dict[str, float], lb=None, ub=None):
+        """
+        2*x1 -10*x2 >= 10
+        model.add_constraint_kw({x1: 2, x2: -10}, lb=10)
+        """
+        assert isinstance(coefs, dict)
+        return self.add_constraint(coefs.items(), lb=lb, ub=ub)
+
+    def add_constraint(self, coefs: list[(str, float)], lb=None, ub=None):
+        """
+        2*x1 -10*x2 >= 10
+        model.add_constraint([("x1", 2), ("x2", -10)], lb=10)
+        """
+        assert isinstance(coefs, list)
         raise NotImplementedError
 
     def remove_constraint(self, cid):
         raise NotImplementedError
 
-    def remove_constraints(self, cs):
+    def remove_constraints(self, cs: tuple):
         raise NotImplementedError
 
-    def set_objective(self, obj):
+    def set_objective_kw(self, **obj: dict[str, float]):
+        return self.set_objective(dict.items())
+
+    def set_objective_dict(self, obj: dict[str, float]):
+        return self.set_objective(dict.items())
+
+    def set_objective(self, obj: tuple[(str, float)]):
         raise NotImplementedError
 
     def optimize(self, solution_limit=1, log=None, only_best=True):

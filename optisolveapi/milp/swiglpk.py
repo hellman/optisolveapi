@@ -1,6 +1,6 @@
 import logging
 from collections import namedtuple
-from .base import MILPX
+from .base import MILP
 
 log = logging.getLogger(__name__)
 
@@ -50,8 +50,8 @@ except ImportError as err:
     log.warning(f"no swiglpk detected: {err}")
 
 
-@MILPX.register("swiglpk")
-class SWIGLPK(MILPX):
+@MILP.register("swiglpk")
+class SWIGLPK(MILP):
     VarInfo = namedtuple("VarInfo", ("name", "typ", "id"))
 
     def __init__(self, maximization, solver):
@@ -73,21 +73,21 @@ class SWIGLPK(MILPX):
         assert typ in "RCIB", typ
         if typ not in ("C", "R"):
             self.has_ints = True
+
         assert glp_get_num_cols(self.model) == len(self.vars)
         varid = len(self.vars) + 1
         glp_add_cols(self.model, 1)
         glp_set_col_name(self.model, varid, name)
+
         if typ in ("C", "R"):
             glp_set_col_kind(self.model, varid, GLP_CV)
         elif typ in ("I",):
             glp_set_col_kind(self.model, varid, GLP_IV)
         elif typ in ("B",):
-
             glp_set_col_kind(self.model, varid, GLP_BV)
-            # print("set col kind BINARY", GLP_CV, GLP_IV, GLP_BV)
         else:
             raise ValueError()
-        #print("var", name, "get col kind", glp_get_col_kind(self.model, varid), "ints", self.has_ints)
+
         return self.VarInfo(name=name, typ=typ, id=varid)
 
     def set_var_bounds(self, var, lb=None, ub=None):
@@ -123,11 +123,11 @@ class SWIGLPK(MILPX):
                 )
         assert 0
 
-    def add_constraint(self, coefs: dict, lb=None, ub=None) -> int:
-        assert isinstance(coefs, dict)
+    def add_constraint(self, coefs: tuple[str, float], lb=None, ub=None) -> int:
         assert lb is not None or ub is not None
         assert lb is None or isinstance(lb, (int, float))
         assert ub is None or isinstance(ub, (int, float))
+        coefs = tuple(coefs)
 
         cid = self._constraint_id
         self._constraint_id += 1
@@ -210,8 +210,8 @@ class SWIGLPK(MILPX):
             == glp_get_num_rows(self.model)
         glp_std_basis(self.model)
 
-    def set_objective(self, coefs):
-        for name, value in coefs.items():
+    def set_objective(self, coefs: tuple[(str, float)]):
+        for name, value in coefs:
             glp_set_obj_coef(
                 self.model,
                 self.vars[name].id,
