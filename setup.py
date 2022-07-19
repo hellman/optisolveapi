@@ -23,6 +23,6 @@ setup(
     python_requires='>=3.5,<4.0',
     install_requires=[
         'python-sat[pblib,aiger]',
-        #'swiglpk',
+        'swiglpk',
     ],
 )
