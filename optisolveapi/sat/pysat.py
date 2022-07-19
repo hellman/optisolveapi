@@ -70,3 +70,5 @@ if has_pysat:
         def __del__(self):
             if hasattr(self, "_solver") and self._solver:
                 self._solver.delete()
+else:
+    PySAT = None
