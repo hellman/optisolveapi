@@ -5,5 +5,3 @@ from .base import MILP
 # from .sage import has_sage
 from .swiglpk import has_swiglpk
 # from . import external
-
-MILP.decide_default_solver()

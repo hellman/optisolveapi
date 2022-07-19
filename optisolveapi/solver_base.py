@@ -3,19 +3,29 @@ import logging
 log = logging.getLogger(__name__)
 
 
+class classproperty(object):
+    # https://stackoverflow.com/a/5192374
+    def __init__(self, f):
+        self.f = f
+    def __get__(self, obj, owner):
+        return self.f(owner)
+
+
 class SolverBase:
     BY_SOLVER = NotImplemented  # to be defined in the collection class
     DEFAULT_PREFERENCE = ()
-    DEFAULT_SOLVER = None
+    _DEFAULT_SOLVER = None
 
-    @classmethod
-    def decide_default_solver(cls):
-        for name in cls.DEFAULT_PREFERENCE:
-            if name in cls.BY_SOLVER:
-                log.info(f"chose preferred solver {name}")
-                cls.DEFAULT_SOLVER = name
-                return name
-            log.warning(f"missing preferred solver {name}")
+    @classproperty
+    def DEFAULT_SOLVER(cls):
+        if not cls._DEFAULT_SOLVER:
+            for name in cls.DEFAULT_PREFERENCE:
+                if name in cls.BY_SOLVER:
+                    log.info(f"chose preferred solver {name}")
+                    cls._DEFAULT_SOLVER = name
+                    return name
+                log.warning(f"missing preferred solver {name}")
+        return cls._DEFAULT_SOLVER
 
     @classmethod
     def register(cls, name):
