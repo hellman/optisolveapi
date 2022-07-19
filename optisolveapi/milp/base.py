@@ -30,8 +30,9 @@ class MILP(SolverBase):
     @classmethod
     def maximization(cls, *args, solver=None, **opts):
         if not solver:
-            solver = "swiglpk"
+            solver = cls.DEFAULT_SOLVER
         log.info(f"MILP maximization with solver '{solver}'")
+
         assert cls is MILP
         return cls.BY_SOLVER[solver.lower()](
             *args,
@@ -40,10 +41,11 @@ class MILP(SolverBase):
         )
 
     @classmethod
-    def minimization(cls, *args, solver="swiglpk", **opts):
+    def minimization(cls, *args, solver=None, **opts):
         if not solver:
-            solver = "swiglpk"
+            solver = cls.DEFAULT_SOLVER
         log.info(f"MILP minimization with solver '{solver}'")
+
         assert cls is MILP
         return cls.BY_SOLVER[solver.lower()](
             *args,
@@ -52,10 +54,11 @@ class MILP(SolverBase):
         )
 
     @classmethod
-    def feasibility(cls, *args, solver="swiglpk", **opts):
+    def feasibility(cls, *args, solver=None, **opts):
         if not solver:
-            solver = "swiglpk"
+            solver = cls.DEFAULT_SOLVER
         log.info(f"MILP feasibility with solver '{solver}'")
+
         assert cls is MILP
         return cls.BY_SOLVER[solver.lower()](
             *args,
@@ -138,10 +141,10 @@ class MILP(SolverBase):
         raise NotImplementedError
 
     def set_objective_kw(self, **obj: dict[str, float]):
-        return self.set_objective(dict.items())
+        return self.set_objective(obj.items())
 
     def set_objective_dict(self, obj: dict[str, float]):
-        return self.set_objective(dict.items())
+        return self.set_objective(obj.items())
 
     def set_objective(self, obj: tuple[(str, float)]):
         raise NotImplementedError
