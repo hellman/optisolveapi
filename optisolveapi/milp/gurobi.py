@@ -14,47 +14,55 @@ if has_gurobi:
     logging.getLogger("gurobipy").setLevel(logging.WARNING)
 
 
+TYPE_MAP = dict(
+    R=GRB.CONTINUOUS,
+    C=GRB.CONTINUOUS,
+    I=GRB.INTEGER,
+    B=GRB.BINARY,
+)
+
 @MILP.register("gurobi")
 class Gurobi(MILP):
     def __init__(self, maximization, solver):
+        super().__init__(maximization, solver)
         assert has_gurobi
-        assert solver == "gurobi"
+
         self.model = gp.Model()
         self.model.setParam("OutputFlag", 0)
         # self.model.setParam("OutputFile", "")
-        self.model.setParam("LogToConsole", 0)
-        self.model.setParam("LogFile", "/dev/null")
-        self.maximization = maximization
-        self.vars = []
+        # self.model.setParam("LogToConsole", 1)
+        # self.model.setParam("LogFile", "/dev/null")
 
-    def set_lb(self, var, lb=None):
-        if lb is None:
-            var.setAttr("lb", float("-inf"))
-        else:
+    @staticmethod
+    def _lin_expr(coefs: list[(str, float)]):
+        return gp.LinExpr([
+            (b, a) for a, b in coefs
+        ])
+
+    def _var(self, name, typ):
+        assert typ in "RCIB", typ
+        v = self.model.addVar(name=name, vtype=typ)
+        return v
+
+    def set_var_bounds(self, var, lb: float = None, ub: float = None):
+        if lb is not None:
             var.setAttr("lb", lb)
-
-    def set_ub(self, var, ub=None):
-        if ub is None:
-            var.setAttr("ub", float("inf"))
-        else:
+        if lb is not None:
             var.setAttr("ub", ub)
 
-    def var_int(self, name, lb=None, ub=None):
-        res = self.model.addVar(name=name, vtype="I")
-        self.set_lb(res, lb)
-        self.set_ub(res, ub)
-        self.vars.append(res)
-        return res
+    def add_constraint(self, coefs: list[(str, float)], lb=None, ub=None):
+        expr = self._lin_expr(coefs)
+        if lb is None or ub is None:
+            if lb is not None:
+                return self.model.addConstr(expr >= lb)
+            if ub is not None:
+                return self.model.addConstr(expr <= ub)
+            raise ValueError("no lb and ub?")
 
-    def var_real(self, name, lb=None, ub=None):
-        res = self.model.addVar(name=name, vtype="C")
-        self.set_lb(res, lb)
-        self.set_ub(res, ub)
-        self.vars.append(res)
-        return res
-
-    def add_constraint(self, c):
-        return self.model.addConstr(c)
+        return (
+            self.model.addConstr(expr >= lb),
+            self.model.addConstr(expr <= ub),
+        )
 
     def remove_constraint(self, c):
         return self.model.remove(c)
@@ -63,14 +71,15 @@ class Gurobi(MILP):
         for c in cs:
             return self.model.remove(c)
 
-    def set_objective(self, obj):
-        self._obj = obj
+    def set_objective(self, coefs):
+        obj = self._lin_expr(coefs)
         if self.maximization:
             return self.model.setObjective(obj, GRB.MAXIMIZE)
         else:
             return self.model.setObjective(obj, GRB.MINIMIZE)
 
     def optimize(self, solution_limit=1, log=None, only_best=True):
+        log = 1
         if not log:
             self.model.setParam("LogFile", "")
             self.model.setParam("LogToConsole", 0)
@@ -107,7 +116,7 @@ class Gurobi(MILP):
                 if obj is not True and solobj + self.EPS < obj and only_best:
                     continue
 
-                vec = {v: self.trunc(v.Xn) for v in self.vars}
+                vec = {v: self.trunc(v.Xn) for v in self.vars.values()}
                 self.solutions.append(vec)
         return obj
 

@@ -96,20 +96,20 @@ class MILP(SolverBase):
 
     def var_int(self, name, lb=None, ub=None):
         assert name not in self.vars
-        self.vars[name] = self._var(name=name, typ="I")
+        v = self.vars[name] = self._var(name=name, typ="I")
         self.set_var_bounds(name, lb, ub)
-        return name
+        return v
 
     def var_real(self, name, lb=None, ub=None):
         assert name not in self.vars
-        self.vars[name] = self._var(name=name, typ="C")
+        v = self.vars[name] = self._var(name=name, typ="C")
         self.set_var_bounds(name, lb, ub)
-        return name
+        return v
 
     def var_binary(self, name):
         assert name not in self.vars
-        self.vars[name] = self._var(name=name, typ="B")
-        return name
+        v = self.vars[name] = self._var(name=name, typ="B")
+        return v
 
     def add_constraint_kw(self, lb=None, ub=None, **coefs: dict[str, float]):
         """
@@ -123,7 +123,6 @@ class MILP(SolverBase):
         2*x1 -10*x2 >= 10
         model.add_constraint_kw({x1: 2, x2: -10}, lb=10)
         """
-        assert isinstance(coefs, dict)
         return self.add_constraint(coefs.items(), lb=lb, ub=ub)
 
     def add_constraint(self, coefs: list[(str, float)], lb=None, ub=None):
@@ -131,7 +130,6 @@ class MILP(SolverBase):
         2*x1 -10*x2 >= 10
         model.add_constraint([("x1", 2), ("x2", -10)], lb=10)
         """
-        assert isinstance(coefs, list)
         raise NotImplementedError
 
     def remove_constraint(self, cid):
@@ -146,7 +144,7 @@ class MILP(SolverBase):
     def set_objective_dict(self, obj: dict[str, float]):
         return self.set_objective(obj.items())
 
-    def set_objective(self, obj: tuple[(str, float)]):
+    def set_objective(self, obj: list[(str, float)]):
         raise NotImplementedError
 
     def optimize(self, solution_limit=1, log=None, only_best=True):
