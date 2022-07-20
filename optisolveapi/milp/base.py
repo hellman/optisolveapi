@@ -132,19 +132,19 @@ class MILP(SolverBase):
         """
         raise NotImplementedError
 
-    def remove_constraint(self, cid):
+    def remove_constraint(self, c):
         raise NotImplementedError
 
     def remove_constraints(self, cs: tuple):
         raise NotImplementedError
 
-    def set_objective_kw(self, **obj: dict[str, float]):
-        return self.set_objective(obj.items())
+    def set_objective_kw(self, **coefs: dict[str, float]):
+        return self.set_objective(coefs.items())
 
-    def set_objective_dict(self, obj: dict[str, float]):
-        return self.set_objective(obj.items())
+    def set_objective_dict(self, coefs: dict[str, float]):
+        return self.set_objective(coefs.items())
 
-    def set_objective(self, obj: list[(str, float)]):
+    def set_objective(self, coefs: list[(str, float)]):
         raise NotImplementedError
 
     def optimize(self, solution_limit=1, log=None, only_best=True):
