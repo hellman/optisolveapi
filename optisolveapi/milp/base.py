@@ -97,13 +97,13 @@ class MILP(SolverBase):
     def var_int(self, name, lb=None, ub=None):
         assert name not in self.vars
         v = self.vars[name] = self._var(name=name, typ="I")
-        self.set_var_bounds(name, lb, ub)
+        self.set_var_bounds(v, lb, ub)
         return v
 
     def var_real(self, name, lb=None, ub=None):
         assert name not in self.vars
         v = self.vars[name] = self._var(name=name, typ="C")
-        self.set_var_bounds(name, lb, ub)
+        self.set_var_bounds(v, lb, ub)
         return v
 
     def var_binary(self, name):

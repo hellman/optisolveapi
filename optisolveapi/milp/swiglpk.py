@@ -93,7 +93,7 @@ class SWIGLPK(MILP):
     def set_var_bounds(self, var, lb=None, ub=None):
         glp_set_col_bnds(
             self.model,
-            self.vars[var].id,
+            self.vars[var.name].id,
             *self._bounds(lb, ub)
         )
 
@@ -146,7 +146,7 @@ class SWIGLPK(MILP):
         # print(coefs)
         ptr = 1
         for var, val in coefs:
-            inds[ptr] = self.vars[var].id
+            inds[ptr] = self.vars[var.name].id
             vals[ptr] = val
             ptr += 1
 
@@ -211,10 +211,10 @@ class SWIGLPK(MILP):
         glp_std_basis(self.model)
 
     def set_objective(self, coefs: tuple[(str, float)]):
-        for name, value in coefs:
+        for var, value in coefs:
             glp_set_obj_coef(
                 self.model,
-                self.vars[name].id,
+                self.vars[var.name].id,
                 value,
             )
 
@@ -290,7 +290,7 @@ class SWIGLPK(MILP):
             return obj
 
         vec = {
-            name: self.trunc(f_var_val(self.model, var.id))
+            var: self.trunc(f_var_val(self.model, var.id))
             for name, var in self.vars.items()
         }
         self.solutions = vec,
