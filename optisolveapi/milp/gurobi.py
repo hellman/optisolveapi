@@ -13,13 +13,13 @@ if has_gurobi:
     # although this prevents from logging to .log...
     logging.getLogger("gurobipy").setLevel(logging.WARNING)
 
+    TYPE_MAP = dict(
+        R=GRB.CONTINUOUS,
+        C=GRB.CONTINUOUS,
+        I=GRB.INTEGER,
+        B=GRB.BINARY,
+    )
 
-TYPE_MAP = dict(
-    R=GRB.CONTINUOUS,
-    C=GRB.CONTINUOUS,
-    I=GRB.INTEGER,
-    B=GRB.BINARY,
-)
 
 @MILP.register("gurobi")
 class Gurobi(MILP):
