@@ -78,7 +78,7 @@ class Gurobi(MILP):
         else:
             return self.model.setObjective(obj, GRB.MINIMIZE)
 
-    def optimize(self, solution_limit=1, log=None, only_best=True):
+    def optimize(self, solution_limit=1, log=None, only_best=True, timeout=None):
         log = 1
         if not log:
             self.model.setParam("LogFile", "")
@@ -93,6 +93,10 @@ class Gurobi(MILP):
         else:
             self.model.setParam("PoolSearchMode", 2)
             self.model.setParam("PoolSolutions", solution_limit)
+
+        if timeout is not None:
+            self.model.setParam("TimeLimit", timeout)
+
 
         self.solutions = []
         self.model.optimize()
