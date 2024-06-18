@@ -37,8 +37,8 @@ try:
         glp_mip_obj_val,
         glp_mip_col_val,
 
-        glp_get_status,
-        GLP_OPT, GLP_FEAS, GLP_NOFEAS, GLP_INFEAS,
+        glp_get_status, glp_mip_status,
+        GLP_OPT, GLP_FEAS, GLP_NOFEAS, GLP_INFEAS, GLP_UNDEF, GLP_UNBND,
 
         GLP_ENOPFS,  # The LP problem instance has no primal feasible solution (only if the LP presolver is used)
         GLP_ENODFS,  # The LP problem instance has no dual feasible solution (only if the LP presolver is used)
@@ -263,28 +263,24 @@ class SWIGLPK(MILP):
             elif ret != 0:
                 raise RuntimeError(f"unknown GLPK error (intopt): {ret}")
 
+            status = glp_mip_status(self.model)
             f_obj_val = glp_mip_obj_val
             f_var_val = glp_mip_col_val
         else:
             f_obj_val = glp_get_obj_val
             f_var_val = glp_get_col_prim
 
-        status = glp_get_status(self.model)
 
-        if self.maximization is None:
-            if status in (GLP_FEAS, GLP_OPT):
-                # somehow GLP_OPT happens even without objective
-                # perhaps GLP_FEAS is only for LP (non-int)?
-                obj = True
-            elif status in (GLP_INFEAS, GLP_NOFEAS):
-                return False
-            else:
-                raise RuntimeError(f"unknown GLPK status: {status}")
+        if status in (GLP_INFEAS, GLP_NOFEAS):
+            return False
+
+        if self.maximization is None and status == GLP_FEAS:
+            return True
+
+        if status == GLP_OPT:
+            obj = self.trunc(f_obj_val(self.model))
         else:
-            if status == GLP_OPT:
-                obj = self.trunc(f_obj_val(self.model))
-            else:
-                raise RuntimeError(f"unknown GLPK status: {status}")
+            raise RuntimeError(f"unknown GLPK status: {status}")
 
         if solution_limit == 0:
             return obj
