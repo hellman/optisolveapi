@@ -50,7 +50,7 @@ class CNF(SolverBase, Constraints):
     def apply(self, cnf, inp):
         assert cnf.n_vars == 1 + len(inp)
         assert cnf.clauses[0] == [-cnf.ZERO] == [-1]
-        mapping = {}
+        mapping = {1: 1, -1: -1}
         # 0 is skipped, 1 is ZERO
         # starting at 2
         for i, v in enumerate(inp):
