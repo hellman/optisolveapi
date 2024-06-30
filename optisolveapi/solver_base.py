@@ -15,6 +15,7 @@ class SolverBase:
     BY_SOLVER = NotImplemented  # to be defined in the collection class
     DEFAULT_PREFERENCE = ()
     _DEFAULT_SOLVER = None
+    AVAILABLE = True
 
     @classproperty
     def DEFAULT_SOLVER(cls):
@@ -30,16 +31,25 @@ class SolverBase:
     @classmethod
     def register(cls, name):
         def deco(subcls):
+            if not subcls.AVAILABLE:
+                log.warning(
+                    f"skipping unavailable solver {name}({subcls.__name__}) in class {cls.__name__} "
+                )
+                return subcls
             if name in cls.BY_SOLVER:
                 log.warning(
-                    f"re-registering solver {name} in class {cls.__name__}"
+                    f"re-registering solver {name} in class {cls.__name__} with {subcls.__name__}"
                 )
             cls.BY_SOLVER[name.lower()] = subcls
             return subcls
         return deco
 
     @classmethod
-    def new(cls, *args, solver, **opts):
+    def new(cls, *args, solver=None, **opts):
+        if solver is None:
+            solver = cls.DEFAULT_SOLVER
+        if solver is None:
+            raise RuntimeError(f"Default solver for {cls.__name__} is not specified.")
         return cls.BY_SOLVER[solver.lower()](
             *args,
             solver=solver,
