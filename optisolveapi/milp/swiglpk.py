@@ -124,6 +124,8 @@ class SWIGLPK(MILP):
         assert 0
 
     def add_constraint(self, coefs: tuple[str, float], lb=None, ub=None) -> int:
+        if isinstance(coefs, dict):
+            coefs = tuple(coefs.items())
         assert lb is not None or ub is not None
         assert lb is None or isinstance(lb, (int, float))
         assert ub is None or isinstance(ub, (int, float))
@@ -270,26 +272,23 @@ class SWIGLPK(MILP):
             f_obj_val = glp_get_obj_val
             f_var_val = glp_get_col_prim
 
-
         if status in (GLP_INFEAS, GLP_NOFEAS):
             return False
 
-        if self.maximization is None and status == GLP_FEAS:
-            return True
-
-        if status == GLP_OPT:
-            obj = self.trunc(f_obj_val(self.model))
+        # print(GLP_OPT, GLP_FEAS, GLP_NOFEAS, GLP_INFEAS, GLP_UNDEF, GLP_UNBND)
+        if self.maximization is None:
+            assert status in (GLP_FEAS, GLP_OPT), f"unknown GLPK status: {status}"
+            obj = True
         else:
-            raise RuntimeError(f"unknown GLPK status: {status}")
+            assert status == GLP_OPT, f"unknown GLPK status: {status}"
+            obj = self.trunc(f_obj_val(self.model))
 
-        if solution_limit == 0:
-            return obj
-
-        vec = {
-            var: self.trunc(f_var_val(self.model, var.id))
-            for name, var in self.vars.items()
-        }
-        self.solutions = vec,
+        if solution_limit > 0:
+            vec = {
+                var: self.trunc(f_var_val(self.model, var.id))
+                for name, var in self.vars.items()
+            }
+            self.solutions = vec,
         return obj
 
     def write_lp(self, filename):
