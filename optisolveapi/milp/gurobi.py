@@ -20,6 +20,9 @@ if has_gurobi:
         B=GRB.BINARY,
     )
 
+NEG_INF = float("-inf")
+INF = float("inf")
+
 
 @MILP.register("gurobi")
 class Gurobi(MILP):
@@ -35,14 +38,19 @@ class Gurobi(MILP):
 
     @staticmethod
     def _lin_expr(coefs: list[(str, float)]):
-        return gp.LinExpr([
-            (b, a) for a, b in coefs
-        ])
+        if isinstance(coefs, dict):
+            return gp.LinExpr([
+                (b, a) for a, b in coefs.items()
+            ])
+        else:
+            return gp.LinExpr([
+                (b, a) for a, b in coefs
+            ])
 
     def _var(self, name, typ):
         assert typ in "RCIB", typ
-        v = self.model.addVar(name=name, vtype=typ)
-        return v
+        # note: Gurobi's default lb=0
+        return self.model.addVar(name=name, vtype=typ, lb=NEG_INF, ub=INF)
 
     def set_var_bounds(self, var, lb: float = None, ub: float = None):
         if lb is not None:
@@ -68,8 +76,7 @@ class Gurobi(MILP):
         return self.model.remove(c)
 
     def remove_constraints(self, cs):
-        for c in cs:
-            return self.model.remove(c)
+        return self.model.remove(cs)
 
     def set_objective(self, coefs):
         obj = self._lin_expr(coefs)
@@ -79,7 +86,6 @@ class Gurobi(MILP):
             return self.model.setObjective(obj, GRB.MINIMIZE)
 
     def optimize(self, solution_limit=1, log=None, only_best=True, timeout=None):
-        log = 1
         if not log:
             self.model.setParam("LogFile", "")
             self.model.setParam("LogToConsole", 0)
@@ -105,7 +111,9 @@ class Gurobi(MILP):
             raise KeyboardInterrupt("gurobi was interrupted")
         assert status in (GRB.OPTIMAL, GRB.INFEASIBLE), status
         if status == GRB.INFEASIBLE:
-            return
+            return False
+
+        assert self.model.SolCount >= 1
 
         if self.maximization is None:
             obj = True
@@ -113,15 +121,19 @@ class Gurobi(MILP):
             obj = self.trunc(self.model.objVal)
 
         if solution_limit != 0:
-            for i in range(min(solution_limit, self.model.SolCount)):
-                self.model.setParam("SolutionNumber", i)
-
-                solobj = self.model.PoolObjVal
-                if obj is not True and solobj + self.EPS < obj and only_best:
-                    continue
-
-                vec = {v: self.trunc(v.Xn) for v in self.vars.values()}
+            if solution_limit == 1:
+                vec = {v: self.trunc(v.X) for v in self.vars.values()}
                 self.solutions.append(vec)
+            else:
+                for i in range(min(solution_limit, self.model.SolCount)):
+                    self.model.setParam("SolutionNumber", i)
+
+                    solobj = self.model.PoolObjVal
+                    if obj is not True and abs(solobj - obj) > self.EPS and only_best:
+                        continue
+
+                    vec = {v: self.trunc(v.Xn) for v in self.vars.values()}
+                    self.solutions.append(vec)
         return obj
 
     def write_lp(self, filename):

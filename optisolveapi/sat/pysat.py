@@ -11,6 +11,7 @@ from .base import CNF
 
 if has_pysat:
     @CNF.register("pysat/cadical")  # CaDiCaL SAT solver
+    @CNF.register("pysat/cadical153")  # CaDiCaL SAT solver
     @CNF.register("pysat/glucose3")  # Glucose 3 SAT solver
     @CNF.register("pysat/glucose4")  # Glucose 4.1 SAT solver
     @CNF.register("pysat/lingeling")  # Lingeling SAT solver
