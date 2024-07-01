@@ -2,7 +2,7 @@ import logging
 from itertools import product
 
 try:
-    from pysat.solvers import Solver
+    from pysat.solvers import Solver, SolverNames
     has_pysat = True
 except ImportError:
     has_pysat = False
@@ -10,25 +10,17 @@ except ImportError:
 from .base import CNF
 
 if has_pysat:
-    @CNF.register("pysat/cadical")  # CaDiCaL SAT solver
-    @CNF.register("pysat/cadical153")  # CaDiCaL SAT solver
-    @CNF.register("pysat/glucose3")  # Glucose 3 SAT solver
-    @CNF.register("pysat/glucose4")  # Glucose 4.1 SAT solver
-    @CNF.register("pysat/lingeling")  # Lingeling SAT solver
-    @CNF.register("pysat/maplechrono")  # MapleLCMDistChronoBT SAT solver
-    @CNF.register("pysat/maplecm")  # MapleCM SAT solver
-    @CNF.register("pysat/maplesat")  # MapleCOMSPS_LRB SAT solver
-    @CNF.register("pysat/minicard")  # Minicard SAT solver
-    @CNF.register("pysat/minisat22")  # MiniSat 2.2 SAT solver
-    @CNF.register("pysat/minisatgh")  # MiniSat SAT solver (version from github)
     class PySAT(CNF):
         log = logging.getLogger(f"{__name__}.PySAT")
 
-        def init_solver(self, solver):
-            assert has_pysat
+        def __init__(self, solver):
+            if not has_pysat:
+                raise ImportError("PySAT not found")
             assert solver.startswith("pysat/")
-            solver = solver[len("pysat/"):]
-            self._solver = Solver(name=solver)
+            pysat_solver = solver[len("pysat/"):]
+            self._solver = Solver(name=pysat_solver)
+
+            super().__init__(solver=solver)
 
         def model_to_sol(self, model):
             res = {(i+1): int(v > 0) for i, v in enumerate(model)}
@@ -71,5 +63,15 @@ if has_pysat:
         def __del__(self):
             if hasattr(self, "_solver") and self._solver:
                 self._solver.delete()
+
+    # seems pysat has no API for listing solvers
+    # for now, getting them out manually
+    for name, aliases in SolverNames.__dict__.items():
+        if name[0] != "_":
+            aliases_str = " ".join(f"pysat/{alias}" for alias in aliases)
+            PySAT.log.debug(f"found solver {name} with aliases {aliases_str}")
+            for alias in aliases:
+                CNF.register(f"pysat/{alias}")(PySAT)
+
 else:
     PySAT = None

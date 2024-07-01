@@ -1,3 +1,5 @@
+import logging
+
 from optisolveapi.vector import Vector
 from optisolveapi.solver_base import SolverBase
 
@@ -7,21 +9,28 @@ from .constraints import Constraints
 class CNF(SolverBase, Constraints):
     BY_SOLVER = {}
     DEFAULT_PREFERENCE = (
-        "pysat/cadical",
+        "pysat/cadical195",
+        "pysat/cadical153",
         "ext/kissat",
     )
 
+    log = logging.getLogger("CNF")
+
     def __init__(self, solver=None):
-        self.init_solver(solver)
+        if type(self) is CNF:
+            raise TypeError("Creation of CNF problems should be done using CNF.new(solver=...)")
+        if solver is None:
+            raise TypeError("solver not passed")
+
         self.n_vars = 0
         self.n_clauses = 0
+        self.solver = solver
 
         self.ZERO = self.var()
         self.add_clause([-self.ZERO])
         self.ONE = -self.ZERO
 
-    def init_solver(self, solver):
-        pass
+        self.log.info(f"SAT solver '{solver}'")
 
     def solve(self, assumptions=()):
         raise NotImplementedError()

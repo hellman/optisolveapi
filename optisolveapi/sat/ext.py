@@ -1,9 +1,14 @@
 import logging
 import subprocess
+import shutil
 
 from .base import CNF
 
+ARG_FLAGS = "<FLAGS>"
+ARG_DIMACS = "<DIMACS>"
 
+
+@CNF.register("ext")
 class ExtSolver(CNF):
     BY_SOLVER = {}
 
@@ -11,12 +16,34 @@ class ExtSolver(CNF):
 
     CMD = NotImplemented
 
-    def __init__(self, flags=(), solver=None):
+    def __init_subclass__(subcls):
+        if subcls.CMD is not NotImplemented:
+            if not shutil.which(subcls.CMD[0]):
+                subcls.log.debug(f"skipping ext solver {subcls.__name__} since command {subcls.CMD[0]} is not available")
+                subcls.AVAILABLE = False
+
+    def __init__(self, flags=(), solver=None, command=None):
+        if self.CMD is NotImplemented:
+            if command is None:
+                raise ValueError("command was not passed to ExtSolver")
+            if isinstance(command, str):
+                self.CMD = [command, ARG_FLAGS, ARG_DIMACS]
+            else:
+                self.CMD = list(command)
+
+            if not shutil.which(self.CMD[0]):
+                raise RuntimeError(f"command {self.CMD[0]} is not available")
+
+        if solver is None:
+            solver = f"ext/{self.CMD[0]}"
+
         self.flags = flags
 
+        super().__init__(solver=solver)
+
     def solve_file(self, filename, log=True):
-        cmd = [filename if v == "<DIMACS_FILE>" else v for v in self.CMD]
-        pos = cmd.index("<FLAGS>")
+        cmd = [filename if v == ARG_DIMACS else v for v in self.CMD]
+        pos = cmd.index(ARG_FLAGS)
         cmd[pos:pos+1] = list(self.flags)
 
         # self.log.info(f"command {cmd}")
@@ -54,6 +81,7 @@ class ExtSolver(CNF):
                 pass
             else:
                 self.log.warning(f"unknown line type {line[:1]}: {line} ")
+
         if ret is None:
             raise RuntimeError("Solver did not solve")
         # self.log.debug(f"ret {ret} sol {sol}")
@@ -64,11 +92,6 @@ class ExtSolver(CNF):
         return False
 
 
-# TODO: should it be ext/kissat?
-@ExtSolver.register("kissat")
+@CNF.register("ext/kissat")
 class Kissat(ExtSolver):
-    CMD = [
-        "kissat",
-        "<FLAGS>",
-        "<DIMACS_FILE>",
-    ]
+    CMD = ["kissat", ARG_FLAGS, ARG_DIMACS]
